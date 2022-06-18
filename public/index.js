@@ -1,4 +1,4 @@
-const gridSize = 3;
+const gridSize = 10;
 // const headers = "  0 1 2 3 4 5 6 7 8 9 ";
 let playerGrid = createGrid();
 let enemyGrid = createGrid();
@@ -6,11 +6,59 @@ let playerShips = 3;
 let enemyShips = 3;
 let enemyLocations = {};
 
+const singlePlayerButton = document.querySelector('#singlePlayerButton');
+const multiPlayerButton = document.querySelector('#multiPlayerButton');
+const playerBoard = document.querySelector('#playerBoard');
+
+let currentPlayer = 'user';
+let gameMode = "";
+let playerNum = 0;
+let ready = false;
+let enemyReady = false;
+let allShipsPlaced = false;
+let shotFired = -1;
+
+// Select Player Mode
+singlePlayerButton.addEventListener('click', startSinglePlayer);
+multiPlayerButton.addEventListener('click', startMultiPlayer);
+
+
+
+
+
 printGrid(enemyGrid, true);
 printGrid(playerGrid);
 
-setupGame();
-gameLoop();
+
+// Single Player
+function startSinglePlayer() {
+    gameMode = "singlePlayer";
+    setupGame();
+    gameLoop();
+}
+
+// Multiplayer
+function startMultiPlayer() {
+    gameMode = "multiPlayer"
+
+    const socket = io();
+    // Get your playernum
+    socket.on('player-number', num => {
+        if (num == -1) {
+            console.log("Sorry, the server is full");
+        }
+        else {
+            playerNum = parseInt(num);
+            if (playerNum == 1) currentPlayer = "enemy";
+
+            console.log(playerNum);
+        }
+    })
+
+    // Another player has connected or disconnected
+    socket.on('player-connection', num => { console.log(`Player number ${num} has connected or disconnected`) })
+
+}
 
 function setupGame() {
     for (let i = 1; i < 4; i++) {
@@ -75,6 +123,7 @@ function createGrid() {
 
 function printGrid(grid, isEnemy = false) {
     drawHeaders()
+    let table;
     for (let i = 0; i < gridSize; i++) {
         let rowStr = i + ' ';
         for (let cell of grid[i]) {
@@ -85,6 +134,9 @@ function printGrid(grid, isEnemy = false) {
             }
         }
         console.log(rowStr);
+        playerBoard.innerHTML += rowStr;
+        playerBoard.innerHTML += '<br>';
+
     }
 }
 
@@ -132,6 +184,8 @@ function drawHeaders() {
         headers += i + ' ';
     }
     console.log(headers);
+    playerBoard.innerHTML += "&nbsp" + headers;
+    playerBoard.innerHTML += '<br>';
 
 }
 
