@@ -8,14 +8,15 @@ let enemyLocations = {};
 
 const singlePlayerButton = document.querySelector('#singlePlayerButton');
 const multiPlayerButton = document.querySelector('#multiPlayerButton');
-const playerBoard = document.querySelector('#playerBoard');
+const startButton = document.querySelector('#startButton');
+// const playerBoard = document.querySelector('#playerBoard');
 
 let currentPlayer = 'user';
 let gameMode = "";
 let playerNum = 0;
 let ready = false;
 let enemyReady = false;
-let allShipsPlaced = false;
+let allShipsPlaced = true;
 let shotFired = -1;
 
 // Select Player Mode
@@ -26,8 +27,8 @@ multiPlayerButton.addEventListener('click', startMultiPlayer);
 
 
 
-printGrid(enemyGrid, true);
-printGrid(playerGrid);
+// printGrid(enemyGrid, true);
+// printGrid(playerGrid);
 
 
 // Single Player
@@ -42,6 +43,7 @@ function startMultiPlayer() {
     gameMode = "multiPlayer"
 
     const socket = io();
+
     // Get your playernum
     socket.on('player-number', num => {
         if (num == -1) {
@@ -52,12 +54,72 @@ function startMultiPlayer() {
             if (playerNum == 1) currentPlayer = "enemy";
 
             console.log(playerNum);
+
+            // get other player stats
+            socket.emit('check-players');
         }
     })
 
     // Another player has connected or disconnected
-    socket.on('player-connection', num => { console.log(`Player number ${num} has connected or disconnected`) })
+    socket.on('player-connection', num => {
+        console.log(`Player number ${num} has connected or disconnected`);
+        playerConnectedOrDisconnected(num);
+    })
 
+    // On enemy ready    
+    socket.on('enemy-ready', num => {
+        enemyReady = true;
+        playerReady(num)
+        if (ready) playGameMulti(socket);
+    })
+
+    // Check player status 
+    socket.on('check-players', players => {
+        players.forEach((p, i) => {
+            if (p.connected) playerConnectedOrDisconnected(i)
+            if (p.ready) {
+                playerReady(i);
+                if (i != playerNum) enemyReady = true;
+            }
+        })
+    })
+
+    // ready button click
+    startButton.addEventListener('click', () => {
+        if (allShipsPlaced) playGameMulti(socket)
+        else {
+            console.log("Por favor, coloque todos os barcos");
+        }
+    })
+
+    function playerConnectedOrDisconnected(num) {
+        let player = `.p${parseInt(num) + 1}`;
+        document.querySelector(`${player} .connected span`).classList.toggle('blue');
+        if (parseInt(num) == playerNum) document.querySelector(player).style.fontWeight = 'bold';
+    }
+
+}
+
+function playGameMulti(socket) {
+    if (!ready) {
+        socket.emit('player-ready')
+        ready = true;
+        playerReady(playerNum);
+    }
+
+    if (enemyReady) {
+        if (currentPlayer == 'user') {
+            console.log('Seu turno!');
+        }
+        if (currentPlayer == 'enemy') {
+            console.log('Turno do inimigo!');
+        }
+    }
+}
+
+function playerReady(num) {
+    let player = `.p${parseInt(num) + 1}`
+    document.querySelector(`${player} .ready span`).classList.toggle('blue');
 }
 
 function setupGame() {
@@ -72,6 +134,7 @@ function setupGame() {
         printGrid(playerGrid);
         // printar regras
     }
+    allShipsPlaced = true;
 }
 
 function gameLoop() {
@@ -99,6 +162,8 @@ function gameLoop() {
 
     checkWinner();
 }
+
+
 
 function checkWinner() {
     if (playerShips < enemyShips) {
@@ -134,8 +199,8 @@ function printGrid(grid, isEnemy = false) {
             }
         }
         console.log(rowStr);
-        playerBoard.innerHTML += rowStr;
-        playerBoard.innerHTML += '<br>';
+        // playerBoard.innerHTML += rowStr;
+        // playerBoard.innerHTML += '<br>';
 
     }
 }
@@ -184,11 +249,24 @@ function drawHeaders() {
         headers += i + ' ';
     }
     console.log(headers);
-    playerBoard.innerHTML += "&nbsp" + headers;
-    playerBoard.innerHTML += '<br>';
+    // playerBoard.innerHTML += "&nbsp" + headers;
+    // playerBoard.innerHTML += '<br>';
 
 }
 
 function drawBreak() {
     console.log("-----------------------");
+}
+
+// Multiplayer Gameplay Methods
+
+function fire() {
+    if (currentPlayer == 'user' && ready && enemyReady) {
+        let x = prompt('Digite a coordenada x para seu ataque!');
+        let y = prompt('Digite a coordenada y para seu ataque!');
+
+        if (attack(x, y, enemyGrid)) {
+            enemyShips--;
+        }
+    }
 }
