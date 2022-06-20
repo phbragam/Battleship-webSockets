@@ -114,11 +114,12 @@ function startMultiPlayer() {
 
     // On fire reply received
     socket.on('fire-reply', fireReplyData => {
-        attackEnemy(fireReplyData.coordinates.x, fireReplyData.coordinates.y, enemyGrid, fireReplyData.hit);
         enemyShips = fireReplyData.enemyShips;
         currentPlayer = 'enemy'
+        attackEnemy(fireReplyData.coordinates.x, fireReplyData.coordinates.y, enemyGrid, fireReplyData.hit);
         gameEnd = checkWinnerMulti();
         if (!gameEnd) {
+            // gameEnd = checkWinnerMulti();
             playGameMulti(socket);
         }
     })
@@ -132,6 +133,8 @@ function startMultiPlayer() {
 }
 
 function playGameMulti(socket) {
+    // break in case of game end
+
     if (!ready) {
         socket.emit('player-ready')
         ready = true;
@@ -332,16 +335,27 @@ function fire(socket) {
 }
 
 function checkWinnerMulti() {
-    if (playerShips == 0) {
+    if (playerShips <= 0) {
+        printTable();
         console.log("Você perdeu!");
+        return true;
     }
-    else if (enemyShips == 0) {
+    else if (enemyShips <= 0) {
+        printTable();
         console.log("Você ganhou!")
+        return true
+    }
+    else {
+        return false;
     }
 }
 
-function enemyTurn() {
-
+function printTable() {
+    console.log('Grid inimigo:')
+    printGrid(enemyGrid, true);
+    console.log('Seu grid:')
+    printGrid(playerGrid);
+    drawBreak();
 }
 
 function attackEnemy(x, y, grid, hit) {
