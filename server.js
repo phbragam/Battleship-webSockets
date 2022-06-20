@@ -30,10 +30,6 @@ io.on('connection', socket => {
         }
     }
 
-
-
-
-
     // tell the connecting client what player number they are
     // see emit as if it has a header (player-number) and the content (playerIndex)
     socket.emit('player-number', playerIndex);
@@ -94,6 +90,11 @@ io.on('connection', socket => {
         socket.emit('timeout')
         socket.disconnect();
     }, 300000)
+
+    // handle game over
+    socket.on('game-over', (roomId) => {
+        socket.disconnect();
+    })
 
 
 

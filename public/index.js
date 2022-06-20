@@ -124,6 +124,9 @@ function startMultiPlayer() {
         if (!gameEnd) {
             playGameMulti(socket);
         }
+        else {
+            socket.emit('game-over', roomId);
+        }
     })
 
     // On fire reply received
@@ -135,6 +138,9 @@ function startMultiPlayer() {
         if (!gameEnd) {
             playGameMulti(socket);
         }
+        else {
+            socket.emit('game-over', roomId);
+        }
     })
 
     function playerConnectedOrDisconnected(num) {
@@ -142,7 +148,6 @@ function startMultiPlayer() {
         document.querySelector(`${player} .connected span`).classList.toggle('blue');
         if (parseInt(num) == playerNum) document.querySelector(player).style.fontWeight = 'bold';
     }
-
 }
 
 function playGameMulti(socket) {
@@ -173,6 +178,7 @@ function playerReady(num) {
     document.querySelector(`${player} .ready span`).classList.toggle('blue');
 }
 
+// Single player
 function setupGame() {
     for (let i = 1; i < 4; i++) {
         let didPlace = false;
@@ -239,7 +245,6 @@ function createGrid() {
             grid[i][j] = '-';
         }
     }
-
     return grid;
 }
 
@@ -261,7 +266,6 @@ function printGrid(grid, isEnemy = false) {
 
 
 function placeCharacter(x, y, c, grid) {
-    //limitar para so colocar onde ainda não foi colocado
     if (grid[y][x] == '-') {
         grid[y][x] = c;
         return true;
@@ -273,7 +277,6 @@ function placeCharacter(x, y, c, grid) {
 }
 
 function placeRandomCharacter(c, grid, max) {
-    // limitar para so conseguir colocar onde não foi colocado
     let didPlace = false;
     while (!didPlace) {
         let x = getRandomInt(max);
@@ -388,6 +391,3 @@ function attackEnemy(x, y, grid, hit) {
     }
 }
 
-function gameOver() {
-    // desconectar soquete ou desabilitar botões
-}
