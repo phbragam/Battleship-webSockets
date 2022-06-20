@@ -16,8 +16,9 @@ let gameMode = "";
 let playerNum = 0;
 let ready = false;
 let enemyReady = false;
-let allShipsPlaced = true;
+let allShipsPlaced = false;
 let shotFired = -1;
+let gameEnd = false;
 
 // Select Player Mode
 singlePlayerButton.addEventListener('click', startSinglePlayer);
@@ -86,9 +87,39 @@ function startMultiPlayer() {
 
     // ready button click
     startButton.addEventListener('click', () => {
-        if (allShipsPlaced) playGameMulti(socket)
-        else {
-            console.log("Por favor, coloque todos os barcos");
+        if (!allShipsPlaced) {
+            setupPlayerShips()
+        }
+
+        playGameMulti(socket)
+    })
+
+    // On fire received
+    socket.on('fire', coordinates => {
+        // checar se foi atingido aqui
+        let fireRepplyData = {}
+        fireRepplyData.hit = attackLocal(coordinates.x, coordinates.y, playerGrid)
+        if (fireRepplyData.hit) {
+            playerShips--;
+        }
+        fireRepplyData.enemyShips = playerShips;
+        fireRepplyData.coordinates = coordinates;
+        socket.emit('fire-reply', fireRepplyData);
+        currentPlayer = 'user';
+        gameEnd = checkWinnerMulti();
+        if (!gameEnd) {
+            playGameMulti(socket);
+        }
+    })
+
+    // On fire reply received
+    socket.on('fire-reply', fireReplyData => {
+        attackEnemy(fireReplyData.coordinates.x, fireReplyData.coordinates.y, enemyGrid, fireReplyData.hit);
+        enemyShips = fireReplyData.enemyShips;
+        currentPlayer = 'enemy'
+        gameEnd = checkWinnerMulti();
+        if (!gameEnd) {
+            playGameMulti(socket);
         }
     })
 
@@ -109,9 +140,21 @@ function playGameMulti(socket) {
 
     if (enemyReady) {
         if (currentPlayer == 'user') {
+            console.log('Grid inimigo:')
+            printGrid(enemyGrid, true);
+            console.log('Seu grid:')
+            printGrid(playerGrid);
+            drawBreak();
             console.log('Seu turno!');
+            fire(socket);
+            currentPlayer == 'enemy';
         }
         if (currentPlayer == 'enemy') {
+            console.log('Grid inimigo:')
+            printGrid(enemyGrid, true);
+            console.log('Seu grid:')
+            printGrid(playerGrid);
+            drawBreak();
             console.log('Turno do inimigo!');
         }
     }
@@ -142,14 +185,14 @@ function gameLoop() {
         let x = prompt('Digite a coordenada x para seu ataque!');
         let y = prompt('Digite a coordenada y para seu ataque!');
 
-        if (attack(x, y, enemyGrid)) {
+        if (attackLocal(x, y, enemyGrid)) {
             enemyShips--;
         }
 
         x = getRandomInt(gridSize);
         y = getRandomInt(gridSize);
 
-        if (enemyShips > 0 && attack(x, y, playerGrid)) {
+        if (enemyShips > 0 && attackLocal(x, y, playerGrid)) {
             playerShips--;
         }
 
@@ -230,7 +273,7 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-function attack(x, y, grid) {
+function attackLocal(x, y, grid) {
     if (grid[y][x] == 'O') {
         grid[y][x] = '*';
         return true;
@@ -260,13 +303,51 @@ function drawBreak() {
 
 // Multiplayer Gameplay Methods
 
-function fire() {
-    if (currentPlayer == 'user' && ready && enemyReady) {
-        let x = prompt('Digite a coordenada x para seu ataque!');
-        let y = prompt('Digite a coordenada y para seu ataque!');
+function setupPlayerShips() {
+    for (let i = 1; i < 4; i++) {
+        // limitar para jogador so poder entrar com certos números
+        let x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
+        let y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
+        placeCharacter(x, y, 'O', playerGrid);
+        // printar regras
+    }
+    console.log("Você posissionou seus barcos assim:")
+    printGrid(playerGrid);
+    drawBreak();
+    allShipsPlaced = true;
+}
 
-        if (attack(x, y, enemyGrid)) {
-            enemyShips--;
-        }
+
+function fire(socket) {
+    if (currentPlayer == 'user' && ready && enemyReady) {
+        let attackCoordinates = {}
+        attackCoordinates.x = prompt('Digite a coordenada x para seu ataque!');
+        attackCoordinates.y = prompt('Digite a coordenada y para seu ataque!');
+
+        socket.emit('fire', attackCoordinates);
+        // if (attack(x, y, enemyGrid)) {
+        //     enemyShips--;
+        // }
+    }
+}
+
+function checkWinnerMulti() {
+    if (playerShips == 0) {
+        console.log("Você perdeu!");
+    }
+    else if (enemyShips == 0) {
+        console.log("Você ganhou!")
+    }
+}
+
+function enemyTurn() {
+
+}
+
+function attackEnemy(x, y, grid, hit) {
+    if (hit == false) {
+        grid[y][x] = 'x';
+    } else {
+        grid[y][x] = '*';
     }
 }

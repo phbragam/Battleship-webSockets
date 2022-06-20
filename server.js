@@ -61,7 +61,6 @@ io.on('connection', socket => {
     })
 
     // check player connections
-
     socket.on('check-players', () => {
         const players = []
         for (const i in connections) {
@@ -69,6 +68,22 @@ io.on('connection', socket => {
                 players.push({ connected: true, ready: connections[i] })
         }
         socket.emit('check-players', players);
+    })
+
+    // On fire received
+    socket.on('fire', coordinates => {
+        console.log(`Shot fired from ${playerIndex}`, coordinates);
+
+        // Emit the move to other player
+        socket.broadcast.emit('fire', coordinates)
+    })
+
+    // On fire repply
+    socket.on('fire-reply', fireReplyData => {
+        console.log(fireReplyData);
+
+        // forward the reply to the other player
+        socket.broadcast.emit('fire-reply', fireReplyData);
     })
 
 
