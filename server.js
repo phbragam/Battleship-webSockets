@@ -15,9 +15,11 @@ app.use(express.static(path.join(__dirname, "public")));
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const connections = [null, null]
+
 // Handle a socket connection request from web client
 io.on('connection', socket => {
     // console.log('New WS Connection');
+    console.log(socket.id);
 
     // Find an available player number
     let playerIndex = -1;
@@ -85,6 +87,13 @@ io.on('connection', socket => {
         // forward the reply to the other player
         socket.broadcast.emit('fire-reply', fireReplyData);
     })
+
+    // Timeout connection
+    setTimeout(() => {
+        connections[playerIndex] = null;
+        socket.emit('timeout')
+        socket.disconnect();
+    }, 300000)
 
 
 

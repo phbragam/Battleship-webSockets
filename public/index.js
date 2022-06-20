@@ -9,8 +9,9 @@ let enemyLocations = {};
 const singlePlayerButton = document.querySelector('#singlePlayerButton');
 const multiPlayerButton = document.querySelector('#multiPlayerButton');
 const startButton = document.querySelector('#startButton');
-// const playerBoard = document.querySelector('#playerBoard');
 
+
+let roomId;
 let currentPlayer = 'user';
 let gameMode = "";
 let playerNum = 0;
@@ -24,16 +25,24 @@ let gameEnd = false;
 singlePlayerButton.addEventListener('click', startSinglePlayer);
 multiPlayerButton.addEventListener('click', startMultiPlayer);
 
+function removeEventListeners() {
+    singlePlayerButton.removeEventListener('click', startSinglePlayer);
+    multiPlayerButton.removeEventListener('click', startMultiPlayer);
+}
 
+function printRules() {
+    console.log("Bem vindo ao batalha no terminal!")
+    console.log("- => Pode atirar")
+    console.log("x => Errou o alvo")
+    console.log("x => Acertou o alvo")
+    drawBreak();
+}
 
-
-
-// printGrid(enemyGrid, true);
-// printGrid(playerGrid);
-
+printRules();
 
 // Single Player
 function startSinglePlayer() {
+    removeEventListeners();
     gameMode = "singlePlayer";
     setupGame();
     gameLoop();
@@ -41,6 +50,7 @@ function startSinglePlayer() {
 
 // Multiplayer
 function startMultiPlayer() {
+    removeEventListeners();
     gameMode = "multiPlayer"
 
     const socket = io();
@@ -85,6 +95,11 @@ function startMultiPlayer() {
         })
     })
 
+    // On timeout
+    socket.on('timeout', () => {
+        console.log("Conexão expirada!");
+    })
+
     // ready button click
     startButton.addEventListener('click', () => {
         if (!allShipsPlaced) {
@@ -96,7 +111,6 @@ function startMultiPlayer() {
 
     // On fire received
     socket.on('fire', coordinates => {
-        // checar se foi atingido aqui
         let fireRepplyData = {}
         fireRepplyData.hit = attackLocal(coordinates.x, coordinates.y, playerGrid)
         if (fireRepplyData.hit) {
@@ -119,7 +133,6 @@ function startMultiPlayer() {
         attackEnemy(fireReplyData.coordinates.x, fireReplyData.coordinates.y, enemyGrid, fireReplyData.hit);
         gameEnd = checkWinnerMulti();
         if (!gameEnd) {
-            // gameEnd = checkWinnerMulti();
             playGameMulti(socket);
         }
     })
@@ -143,21 +156,13 @@ function playGameMulti(socket) {
 
     if (enemyReady) {
         if (currentPlayer == 'user') {
-            console.log('Grid inimigo:')
-            printGrid(enemyGrid, true);
-            console.log('Seu grid:')
-            printGrid(playerGrid);
-            drawBreak();
+            printTable();
             console.log('Seu turno!');
             fire(socket);
             currentPlayer == 'enemy';
         }
         if (currentPlayer == 'enemy') {
-            console.log('Grid inimigo:')
-            printGrid(enemyGrid, true);
-            console.log('Seu grid:')
-            printGrid(playerGrid);
-            drawBreak();
+            printTable();
             console.log('Turno do inimigo!');
         }
     }
@@ -170,15 +175,21 @@ function playerReady(num) {
 
 function setupGame() {
     for (let i = 1; i < 4; i++) {
-        // limitar para jogador so poder entrar com certos números
-        let x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
-        let y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
-        placeCharacter(x, y, 'O', playerGrid);
+        let didPlace = false;
+        let x = 0;
+        let y = 0;
+        while (x < 0 || x > 9 || y < 0 || y > 9 || didPlace == false) {
+            x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
+            y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
+            didPlace = placeCharacter(x, y, 'O', playerGrid);
+            if (!didPlace) {
+                console.log("Você já colocou um barco aí!");
+            }
+        }
         placeRandomCharacter('O', enemyGrid, gridSize);
         drawBreak();
         printGrid(enemyGrid, true);
         printGrid(playerGrid);
-        // printar regras
     }
     allShipsPlaced = true;
 }
@@ -245,16 +256,20 @@ function printGrid(grid, isEnemy = false) {
             }
         }
         console.log(rowStr);
-        // playerBoard.innerHTML += rowStr;
-        // playerBoard.innerHTML += '<br>';
-
     }
 }
 
 
 function placeCharacter(x, y, c, grid) {
     //limitar para so colocar onde ainda não foi colocado
-    grid[y][x] = c;
+    if (grid[y][x] == '-') {
+        grid[y][x] = c;
+        return true;
+    }
+    else {
+        return false;
+    }
+
 }
 
 function placeRandomCharacter(c, grid, max) {
@@ -309,12 +324,19 @@ function drawBreak() {
 function setupPlayerShips() {
     for (let i = 1; i < 4; i++) {
         // limitar para jogador so poder entrar com certos números
-        let x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
-        let y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
-        placeCharacter(x, y, 'O', playerGrid);
-        // printar regras
+        let didPlace = false;
+        let x = 0;
+        let y = 0;
+        while (x < 0 || x > 9 || y < 0 || y > 9 || didPlace == false) {
+            x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
+            y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
+            didPlace = placeCharacter(x, y, 'O', playerGrid);
+            if (!didPlace) {
+                console.log("Você já colocou um barco aí!");
+            }
+        }
     }
-    console.log("Você posissionou seus barcos assim:")
+    console.log("Você posicionou seus barcos assim:")
     printGrid(playerGrid);
     drawBreak();
     allShipsPlaced = true;
@@ -364,4 +386,8 @@ function attackEnemy(x, y, grid, hit) {
     } else {
         grid[y][x] = '*';
     }
+}
+
+function gameOver() {
+    // desconectar soquete ou desabilitar botões
 }
