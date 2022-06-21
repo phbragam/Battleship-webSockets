@@ -34,7 +34,7 @@ function printRules() {
     console.log("Bem vindo ao batalha no terminal!")
     console.log("- => Pode atirar")
     console.log("x => Errou o alvo")
-    console.log("x => Acertou o alvo")
+    console.log("* => Acertou o alvo")
     drawBreak();
 }
 
@@ -64,17 +64,23 @@ function startMultiPlayer() {
             playerNum = parseInt(num);
             if (playerNum == 1) currentPlayer = "enemy";
 
-            console.log(playerNum);
-
             // get other player stats
             socket.emit('check-players');
         }
     })
 
-    // Another player has connected or disconnected
+    // Another player has connected
     socket.on('player-connection', num => {
-        console.log(`Player number ${num} has connected or disconnected`);
+        console.log(`Jogador ${parseInt(num) + 1} se conectou!`);
         playerConnectedOrDisconnected(num);
+    })
+
+    // Another player has disconnected
+    socket.on('player-disconnect', num => {
+        console.log(`Jogador ${parseInt(num) + 1} se desconectou!`);
+        playerConnectedOrDisconnected(num);
+        enemyShips = 0;
+        checkWinnerMulti()
     })
 
     // On enemy ready    
@@ -124,9 +130,6 @@ function startMultiPlayer() {
         if (!gameEnd) {
             playGameMulti(socket);
         }
-        else {
-            socket.emit('game-over', roomId);
-        }
     })
 
     // On fire reply received
@@ -137,9 +140,6 @@ function startMultiPlayer() {
         gameEnd = checkWinnerMulti();
         if (!gameEnd) {
             playGameMulti(socket);
-        }
-        else {
-            socket.emit('game-over', roomId);
         }
     })
 
@@ -187,9 +187,12 @@ function setupGame() {
         while (x < 0 || x > 9 || y < 0 || y > 9 || didPlace == false) {
             x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
             y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
-            didPlace = placeCharacter(x, y, 'O', playerGrid);
-            if (!didPlace) {
-                console.log("Você já colocou um barco aí!");
+
+            if (x >= 0 && x <= 9 && y >= 0 && y <= 9 && !didPlace) {
+                didPlace = placeCharacter(x, y, 'O', playerGrid);
+                if (!didPlace) {
+                    console.log("Você já colocou um barco aí!");
+                }
             }
         }
         placeRandomCharacter('O', enemyGrid, gridSize);
@@ -333,9 +336,12 @@ function setupPlayerShips() {
         while (x < 0 || x > 9 || y < 0 || y > 9 || didPlace == false) {
             x = prompt('Digite a coordenada x para seu navio número ' + i + ' (de 0 a 9)');
             y = prompt('Digite a coordenada y para seu navio número ' + i + ' (de 0 a 9)');
-            didPlace = placeCharacter(x, y, 'O', playerGrid);
-            if (!didPlace) {
-                console.log("Você já colocou um barco aí!");
+
+            if (x >= 0 && x <= 9 && y >= 0 && y <= 9 && !didPlace) {
+                didPlace = placeCharacter(x, y, 'O', playerGrid);
+                if (!didPlace) {
+                    console.log("Você já colocou um barco aí!");
+                }
             }
         }
     }
@@ -353,9 +359,6 @@ function fire(socket) {
         attackCoordinates.y = prompt('Digite a coordenada y para seu ataque!');
 
         socket.emit('fire', attackCoordinates);
-        // if (attack(x, y, enemyGrid)) {
-        //     enemyShips--;
-        // }
     }
 }
 
