@@ -58,7 +58,7 @@ function startMultiPlayer() {
     // Get your playernum
     socket.on('player-number', num => {
         if (num == -1) {
-            console.log("Sorry, the server is full");
+            console.log("Desculpe, o servidor está lotado");
         }
         else {
             playerNum = parseInt(num);
